@@ -21,9 +21,45 @@ locals {
     owner   = var.owner
     course  = var.course
   }
+
+  # Step Function definition (Lambda -> Wait -> Glue Crawler)
+  sfn_definition = {
+    Comment = "Velib pipeline demo: ingest lambda -> wait -> start crawler"
+    StartAt = "InvokeIngestLambda"
+    States  = {
+      InvokeIngestLambda = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::lambda:invoke"
+        Parameters = {
+          FunctionName = aws_lambda_function.velib_ingest.arn
+          Payload      = {}
+        }
+        Next = "WaitForS3"
+      }
+
+      WaitForS3 = {
+        Type    = "Wait"
+        Seconds = 10
+        Next    = "StartCrawler"
+      }
+
+      StartCrawler = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::aws-sdk:glue:startCrawler"
+        Parameters = {
+          Name = aws_glue_crawler.velib_crawler.name
+        }
+        Next = "Success"
+      }
+
+      Success = {
+        Type = "Succeed"
+      }
+    }
+  }
 }
 
-# --- Réutiliser le rôle existant du lab (PAS de CreateRole) ---
+# --- IAM Role existant du lab ---
 data "aws_iam_role" "labrole" {
   name = var.lab_role_name
 }
@@ -51,7 +87,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "sse" {
   }
 }
 
-# Dossiers logiques (optionnel, juste pour le repérage)
+# Dossiers logiques
 resource "aws_s3_object" "raw_prefix" {
   bucket  = aws_s3_bucket.bucket.id
   key     = "raw/source=velib/"
@@ -64,14 +100,14 @@ resource "aws_s3_object" "athena_results_prefix" {
   content = ""
 }
 
-# --- Packager le code Lambda ---
+# --- Packager la Lambda ---
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/lambda"
   output_path = "${path.module}/lambda.zip"
 }
 
-# --- Lambda Function ---
+# --- Lambda Ingestion ---
 resource "aws_lambda_function" "velib_ingest" {
   function_name = "velib_ingest_lambda"
   role          = data.aws_iam_role.labrole.arn
@@ -81,8 +117,8 @@ resource "aws_lambda_function" "velib_ingest" {
   filename         = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
-  timeout      = 30
-  memory_size  = 256
+  timeout     = 30
+  memory_size = 256
 
   environment {
     variables = {
@@ -93,8 +129,7 @@ resource "aws_lambda_function" "velib_ingest" {
   tags = local.tags
 }
 
-# --- EventBridge Scheduler (toutes les 15 minutes) ---
-# Si ton lab n'autorise pas Scheduler, on basculera vers cloudwatch_event_rule
+# --- EventBridge Scheduler (15 min) ---
 resource "aws_scheduler_schedule" "every_15_min" {
   name = "velib_ingest_schedule"
 
@@ -107,12 +142,10 @@ resource "aws_scheduler_schedule" "every_15_min" {
   target {
     arn      = aws_lambda_function.velib_ingest.arn
     role_arn = data.aws_iam_role.labrole.arn
-
-    input = jsonencode({})
+    input    = jsonencode({})
   }
 }
 
-# Permission pour que scheduler invoke Lambda
 resource "aws_lambda_permission" "allow_scheduler" {
   statement_id  = "AllowExecutionFromScheduler"
   action        = "lambda:InvokeFunction"
@@ -126,7 +159,7 @@ resource "aws_glue_catalog_database" "velib_db" {
   name = "velib_db"
 }
 
-# --- Glue Crawler ---
+# --- Glue Crawler (RAW pour l’instant) ---
 resource "aws_glue_crawler" "velib_crawler" {
   name          = "velib_raw_crawler"
   role          = data.aws_iam_role.labrole.arn
@@ -149,5 +182,13 @@ resource "aws_athena_workgroup" "wg" {
     }
   }
 
+  tags = local.tags
+}
+
+# --- Step Functions (orchestrateur démo) ---
+resource "aws_sfn_state_machine" "velib_orchestrator" {
+  name     = "velib_orchestrator"
+  role_arn = data.aws_iam_role.labrole.arn
+  definition = jsonencode(local.sfn_definition)
   tags = local.tags
 }

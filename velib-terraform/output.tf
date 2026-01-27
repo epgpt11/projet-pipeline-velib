@@ -21,3 +21,11 @@ output "glue_crawler" {
 output "athena_workgroup" {
   value = aws_athena_workgroup.wg.name
 }
+
+output "step_function_name" {
+  value = aws_sfn_state_machine.velib_orchestrator.name
+}
+
+output "step_function_arn" {
+  value = aws_sfn_state_machine.velib_orchestrator.arn
+}

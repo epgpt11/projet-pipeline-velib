@@ -94,6 +94,15 @@ Un seul environnement AWS est utilisé (contrainte du lab étudiant).
 
 ---
 
-## 🎓 Cours
-EPISEN – Data Pipeline Cloud  
-Année universitaire 2025–2026
+## Arborescence 
+`velib-terraform/
+  main.tf
+  variables.tf
+  output.tf
+
+  lambda/
+    lambda_function.py      # Lambda ingestion (ton fichier)
+  
+  glue/
+    velib_clean.py          # Glue job (script de ta collègue)
+`

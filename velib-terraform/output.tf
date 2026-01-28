@@ -1,31 +1,35 @@
 output "bucket_name" {
-  value = var.bucket_name
+  value = aws_s3_bucket.bucket.bucket
 }
 
-output "lambda_name" {
+output "lambda_ingest" {
   value = aws_lambda_function.velib_ingest.function_name
-}
-
-output "scheduler_name" {
-  value = aws_scheduler_schedule.every_15_min.name
 }
 
 output "glue_database" {
   value = aws_glue_catalog_database.velib_db.name
 }
 
-output "glue_crawler" {
-  value = aws_glue_crawler.velib_crawler.name
+output "glue_clean_job" {
+  value = aws_glue_job.velib_clean_job.name
+}
+
+output "glue_clean_crawler" {
+  value = aws_glue_crawler.velib_clean_crawler.name
 }
 
 output "athena_workgroup" {
   value = aws_athena_workgroup.wg.name
 }
 
-output "step_function_name" {
-  value = aws_sfn_state_machine.velib_orchestrator.name
+output "sfn_pipeline_arn" {
+  value = aws_sfn_state_machine.velib_pipeline.arn
 }
 
-output "step_function_arn" {
-  value = aws_sfn_state_machine.velib_orchestrator.arn
+output "sfn_kpi_arn" {
+  value = aws_sfn_state_machine.velib_kpi_views.arn
+}
+
+output "scheduler_name" {
+  value = aws_scheduler_schedule.every_15_min.name
 }

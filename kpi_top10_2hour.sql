@@ -1,5 +1,5 @@
 -- 10 stations en critique pour 2 dernieres heures
-
+REATE OR REPLACE VIEW kpi_top10_2hour AS
 WITH recent AS (
   SELECT
     station_id,
@@ -8,7 +8,7 @@ WITH recent AS (
     bikes_i,
     docks_i,
     fill_rate
-  FROM velib_station_typed
+  FROM source_velib
   WHERE is_installed_i = 1
     AND ingested_ts >= date_add('hour', -2, current_timestamp)
     AND bikes_i IS NOT NULL

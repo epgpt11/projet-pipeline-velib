@@ -113,7 +113,7 @@ Toutes les ressources sont taguées avec :
 
 ---
 
-## 👥 Organisation de l’équipe
+## Organisation de l’équipe
 - **Infra & Orchestration** : Terraform, S3, Lambda, Step Functions, Glue
 - **Data Processing & Analytics** : Glue Job (clean), Athena (SQL), KPI, slides
 

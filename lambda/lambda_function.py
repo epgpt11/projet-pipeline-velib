@@ -28,13 +28,13 @@ def fetch_all_records(limit=100):
         results = payload.get("results", [])
         all_results.extend(results)
 
-        # dernière page
+       
         if len(results) < limit:
             break
 
         offset += limit
 
-        # garde-fou
+        
         if offset > 50000:
             break
 

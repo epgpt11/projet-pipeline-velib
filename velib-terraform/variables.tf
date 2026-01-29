@@ -6,7 +6,7 @@ variable "region" {
 variable "bucket_name" {
   type    = string
   # Doit être UNIQUE mondialement
-  default = "velib-insights-naw-seu-2326-tf"
+  default = "velib-insights-naw-seu-2326-demo"
 }
 
 variable "project" {
@@ -24,7 +24,7 @@ variable "course" {
   default = "data-pipeline-episen"
 }
 
-# LabRole uniquement (pas de CreateRole)
+# LabRole uniquement 
 variable "lab_role_name" {
   type    = string
   default = "LabRole"
@@ -71,7 +71,7 @@ variable "athena_workgroup_name" {
   default = "velib_workgroup"
 }
 
-# Table clean créée par le crawler (vous l’avez: source_velib)
+# Table clean créée par le crawler 
 variable "clean_table_name" {
   type    = string
   default = "source_velib"

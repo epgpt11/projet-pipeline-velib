@@ -66,7 +66,7 @@ def lambda_handler(event, context):
         "results": records
     }
 
-    # 3) Chemin S3 selon votre convention
+    # 3) Chemin S3 selon 
     key = (
         f"raw/source=velib/date={date_str}/hour={hour_str}/"
         f"velib_{file_ts}.json"

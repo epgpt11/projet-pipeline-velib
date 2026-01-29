@@ -1,31 +1,39 @@
 # Vélib’ Daily Insights – Data Pipeline AWS
 
-## 📌 Contexte
+## Contexte
 Ce projet a été réalisé dans le cadre du cours **Data Pipeline Cloud (EPISEN)**.  
-L’objectif est de concevoir un **pipeline de données automatisé sur AWS**, à partir des données Open Data Vélib’, afin de produire des indicateurs métier exploitables via un dashboard.
+L’objectif est de concevoir un **pipeline de données automatisé sur AWS**, à partir des données **Open Data Vélib’**, afin de produire des **KPI métier exploitables** via des requêtes analytiques et une visualisation cible.
 
 ---
 
-## 🏗️ Architecture Générale
-Pipeline simple et automatisé :
+## Architecture Générale
+Pipeline automatisé en **deux workflows complémentaires** :
 
-EventBridge → Lambda → S3 (Raw) → Glue Crawler → Athena → QuickSight
+### Workflow 1 — Pipeline Data (planifié)
+EventBridge → Step Functions → Lambda → S3 (Raw) → Glue Job → S3 (Clean) → Glue Crawler → Athena
 
-- Ingestion régulière des données Vélib’
-- Stockage des données brutes dans S3
-- Catalogage automatique avec Glue
-- Requêtes analytiques avec Athena
-- Visualisation des KPI via QuickSight
+- Ingestion régulière des données Vélib’ (snapshot)
+- Nettoyage et typage des données
+- Stockage optimisé en Parquet
+- Catalogage automatique
+- Données prêtes à l’analyse
+
+### Workflow 2 — KPI & Analytics (manuel – démo)
+Step Functions → Athena (CREATE OR REPLACE VIEW)
+
+- Création automatisée des vues KPI
+- Aucune saisie manuelle de requêtes SQL
+- Démonstration rapide et reproductible
 
 ---
 
-## 🌍 Région AWS
-- **Région utilisée** : `us-east-1` 
-> ⚠️ Toutes les ressources doivent être créées dans cette région.
+## Région AWS
+- **Région utilisée** : `us-east-1`  
+> ⚠️ Toutes les ressources sont déployées dans cette région (contrainte du lab étudiant).
 
 ---
 
-## 🧩 Convention de nommage
+## Convention de nommage
 
 ### Projet
 - **Project name** : `velib-insights`
@@ -33,31 +41,62 @@ EventBridge → Lambda → S3 (Raw) → Glue Crawler → Athena → QuickSight
 ### S3
 - **Bucket principal** : `velib-insights-naw-seu-2326`
 
+#### Organisation S3
+- `raw/source=velib/` : données brutes JSON (snapshots)
+- `clean/source=velib/` : données nettoyées (Parquet)
+- `glue/scripts/` : scripts Glue
+- `glue/tmp/` : répertoire temporaire Glue
+- `athena-results/` : résultats Athena
+
 ---
 
-## ⚙️ Ressources AWS
+## Ressources AWS
 
 ### Lambda
 - **Nom** : `velib_ingest_lambda`
-- **Rôle** : récupération des données Vélib’ via l’API Open Data et écriture dans S3
+- **Rôle** : appel de l’API Open Data Vélib et écriture des snapshots dans S3 (raw)
 
 ### EventBridge
-- **Rule** : `velib_ingest_schedule`
+- **Schedule** : `velib_pipeline_schedule`
 - **Fréquence** : toutes les **15 minutes**
+- **Rôle** : déclenchement automatique du pipeline
 
-### AWS Glue
-- **Database** : `velib_db`
-- **Crawler** : `velib_raw_crawler`
-- **Rôle** : catalogage automatique des données S3
+### Step Functions
 
-### Athena
-- **Workgroup** : `velib_workgroup`
-- **Rôle** : requêtes SQL pour calcul des KPI
+#### 1️ Pipeline Data
+- **Nom** : `velib_pipeline`
+- **Étapes** :
+  1. Invoke Lambda (ingestion)
+  2. Attente courte
+  3. Glue Job (nettoyage)
+  4. Glue Crawler (catalogage)
+
+#### 2️ KPI Views (manuel)
+- **Nom** : `velib_kpi_views`
+- **Rôle** : exécution automatique des requêtes SQL de création de vues KPI dans Athena
 
 ---
 
-## 🏷️ Tags AWS
-Les ressources AWS sont taguées avec les clés suivantes :
+### AWS Glue
+- **Database** : `velib_db_tf`
+- **Glue Job** : `velib_clean_job`
+  - Nettoyage, typage, enrichissement
+  - Sortie en Parquet partitionné (date / hour)
+- **Crawler** : `velib_clean_crawler`
+  - Création de la table `source_velib`
+
+---
+
+### Athena
+- **Workgroup** : `velib_workgroup`
+- **Rôle** :
+  - Analyse des données clean
+  - Support des vues KPI
+
+---
+
+## Tags AWS
+Toutes les ressources sont taguées avec :
 
 - `project` = `velib-insights`
 - `owner` = `team-naw-seu`
@@ -65,44 +104,59 @@ Les ressources AWS sont taguées avec les clés suivantes :
 
 ---
 
-## 📊 KPI analysés
+##  KPI analysés (via vues Athena)
 - Taux de remplissage des stations
-- Stations en pénurie (0 vélo disponible)
-- Stations saturées (0 borne libre ou > 90%)
-- Top 10 stations critiques
+- Stations en pénurie (0 vélo)
+- Stations saturées (0 borne ou ≥ 90 %)
+- Top 10 stations critiques (fenêtre 2h)
 - Analyse par arrondissement
-- Analyse par tranche horaire
 
 ---
 
 ## 👥 Organisation de l’équipe
-- **Infra & Ingestion** : S3, Lambda, EventBridge, Glue, Terraform
-- **Analytics & Visualisation** : Athena (SQL), QuickSight, KPI, slides client
+- **Infra & Orchestration** : Terraform, S3, Lambda, Step Functions, Glue
+- **Data Processing & Analytics** : Glue Job (clean), Athena (SQL), KPI, slides
 
 ---
 
-## 🚀 Déploiement
-L’infrastructure est déployée via **Infrastructure as Code (Terraform)**.  
-Un seul environnement AWS est utilisé (contrainte du lab étudiant).
+## Déploiement
+- Infrastructure déployée via **Terraform (IaC)**
+- Pipeline **largement automatisé** (déploiement + exécution)
+- Step Function KPI déclenchée manuellement pour la démonstration
 
 ---
 
-## 📎 Remarques
-- Projet conçu comme un **PoC client**
-- Architecture volontairement simple, robuste et peu coûteuse
-- Aucun Machine Learning utilisé (conformément aux attentes du cours)
+## Coûts (ordre de grandeur)
+- Lambda, EventBridge, Step Functions, S3 : **coût négligeable**
+- Athena : facturation au volume scanné (faible grâce au Parquet)
+- Glue : principal coût (DPU × durée), mais très faible pour ce PoC
 
 ---
 
-## Arborescence 
-`velib-terraform/
-  main.tf
-  variables.tf
-  output.tf
+## Remarques
+- Source **Open Data publique**
+- Pipeline conçu comme un **PoC client**
+- Architecture volontairement simple, robuste et scalable
+- Aucun Machine Learning (conformément aux consignes du cours)
 
-  lambda/
-    lambda_function.py      # Lambda ingestion (ton fichier)
-  
-  glue/
-    velib_clean.py          # Glue job (script de ta collègue)
-`
+---
+
+## Arborescence du projet
+
+```text
+velib-terraform/
+├── main.tf
+├── variables.tf
+├── output.tf
+│
+├── lambda/
+│   └── lambda_function.py
+│
+├── glue/
+│   └── velib_clean.py
+│
+├── kpi_taux_remplissage.sql
+├── kpi_shortage.sql
+├── kpi_station_saturation.sql
+├── kpi_saturation_par_arrondissement.sql
+└── kpi_top10_2hour.sql

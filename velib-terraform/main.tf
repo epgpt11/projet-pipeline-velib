@@ -276,7 +276,7 @@ locals {
   }
 }
 
-# --- Réutiliser le rôle existant du lab (PAS de CreateRole) ---
+# --- Réutiliser le rôle existant du lab  ---
 data "aws_iam_role" "labrole" {
   name = var.lab_role_name
 }
